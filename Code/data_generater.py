@@ -52,7 +52,7 @@ def comp_tag(new_file, old_file):
     return (comp_ctag_table_all_infos, comp_ctag_table, comp_nctag_table)
 
 
-def data_aggregater(comp_ctag_table, comp_nctag_table):
+def data_aggregater(comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos):
     comp_tag_table_all = pd.concat([comp_ctag_table, comp_nctag_table])
     # 为每一个公司赋予一个整数ID，以减小之后的计算量
     comp_id_dict = comp_tag_table_all["comp_id"].drop_duplicates().reset_index(drop=True)
@@ -62,6 +62,7 @@ def data_aggregater(comp_ctag_table, comp_nctag_table):
         .drop(["comp_id"], axis=1)
     comp_nctag_table = comp_nctag_table.merge(comp_id_dict, how="left", left_on="comp_id", right_on="comp_id") \
         .drop(["comp_id"], axis=1)
+    comp_total_num = len(comp_id_dict)
 
     # 为每一个标签赋予一个UUID
     tag_list = comp_tag_table_all["label_name"].drop_duplicates().reset_index(drop=True)
@@ -87,5 +88,17 @@ def data_aggregater(comp_ctag_table, comp_nctag_table):
         .agg({"comp_int_id": lambda x: set(x), "count_comps": "count"}).reset_index()
     nctag_comps_aggregated = nctag_comps_aggregated_all[nctag_comps_aggregated_all.count_comps >= nctag_filter_num] \
         [["tag_uuid", "comp_int_id"]].reset_index(drop=True)
-    return (ctag_comps_aggregated, nctag_comps_aggregated, comp_properties, tag_dict)
+
+    # 将公司信息整合成comp_id: property1, property2, ... 的形式，其中概念和非概念标签列表、顶级标签列表，作为初始特征，
+    # 属性字段可以拓展，作为过滤条件或计算关系型过滤条件的依据。
+    comp_ctags_aggregated = comp_ctag_table.groupby("comp_int_id").agg({"tag_uuid": lambda x: set(x)}).reset_index()
+    comp_nctags_aggregated = comp_nctag_table.groupby("comp_int_id").agg({"tag_uuid": lambda x: set(x)}).reset_index()
+    comp_ctags_aggregated.tag_uuid = comp_ctags_aggregated.tag_uuid.apply(lambda x: {"ctags": x})
+    comp_nctags_aggregated.tag_uuid = comp_nctags_aggregated.tag_uuid.apply(lambda x: {"nctags": x})
+    comp_tags_all = comp_ctags_aggregated.merge(comp_nctags_aggregated, how="outer", left_on="comp_int_id", right_on="comp_int_id")
+    comp_tags_all.fillna(value={"tag_uuid_x": {}, "tag_uuid_y": {}}, inplace=True)
+    comp_tags_all["tag_infos"] = comp_tags_all[["tag_uuid_x", "tag_uuid_y"]].apply(lambda x: {**(x[0]), **(x[1])}, axis=1)
+
+
+    return (ctag_comps_aggregated, nctag_comps_aggregated, comp_tags_all, tag_dict, comp_total_num)
 
