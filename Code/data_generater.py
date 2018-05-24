@@ -4,8 +4,8 @@ import pandas as pd
 import numpy as numpy
 import uuid
 import pickle
-nctag_filter_num = 50
 
+nctag_filter_num = 50
 
 def final_count(l1, l2):
     return len(l1.intersection(l2))/len(l1.union(l2))
