@@ -106,6 +106,5 @@ def data_aggregater(comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos
     comp_tags_all_file = open("../Data/Output/recommendation/comp_tags_all.pkl", "wb")
     pickle.dump(comp_tags_all_dict, comp_tags_all_file)
     comp_tags_all_file.close()
-
     return (ctag_comps_aggregated, nctag_comps_aggregated, comp_total_num)
 
