@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as numpy
 import uuid
 import pickle
+import os
 
 nctag_filter_num = 50
 
@@ -49,7 +50,7 @@ def comp_tag(new_file, old_file):
     comp_nctag_table = data_raw_nctag_with_mark[data_raw_nctag_with_mark.ctag_mark != 1] \
         .drop(["ctag_mark"], axis=1).reset_index(drop=True)
 
-    return (comp_ctag_table_all_infos, comp_ctag_table, comp_nctag_table)
+    return (comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos)
 
 
 def data_aggregater(comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos):
@@ -91,20 +92,25 @@ def data_aggregater(comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos
 
     # 将公司信息整合成comp_id: property1, property2, ... 的形式，其中概念和非概念标签列表、顶级标签列表，作为初始特征，
     # 属性字段可以拓展，作为过滤条件或计算关系型过滤条件的依据。
-    comp_ctags_aggregated = comp_ctag_table.groupby("comp_int_id").agg({"tag_uuid": lambda x: set(x)}).reset_index()
-    comp_nctags_aggregated = comp_nctag_table.groupby("comp_int_id").agg({"tag_uuid": lambda x: set(x)}).reset_index()
-    comp_ctags_aggregated.tag_uuid = comp_ctags_aggregated.tag_uuid.apply(lambda x: {"ctags": x})
-    comp_nctags_aggregated.tag_uuid = comp_nctags_aggregated.tag_uuid.apply(lambda x: {"nctags": x})
-    comp_tags_all = comp_ctags_aggregated.merge(comp_nctags_aggregated, how="outer", left_on="comp_int_id", right_on="comp_int_id")
-    comp_tags_all.fillna(0, inplace=True)
-    comp_tags_all.tag_uuid_x = comp_tags_all.tag_uuid_x.apply(lambda x: {} if x == 0 else x)
-    comp_tags_all.tag_uuid_y = comp_tags_all.tag_uuid_y.apply(lambda x: {} if x == 0 else x)
-    comp_tags_all["tag_infos"] = comp_tags_all[["tag_uuid_x", "tag_uuid_y"]].apply(lambda x: {**(x[0]), **(x[1])}, axis=1)
-    comp_tags_all = comp_tags_all.merge(comp_id_dict, how="left", left_on="comp_int_id", right_on="comp_int_id")
-    comp_tags_all.drop(["tag_uuid_x", "tag_uuid_y", "comp_int_id"], axis=1, inplace=True)
-    comp_tags_all_dict = dict(zip(comp_tags_all.comp_id, comp_tags_all.tag_infos))
-    comp_tags_all_file = open("../Data/Output/recommendation/comp_tags_all.pkl", "wb")
-    pickle.dump(comp_tags_all_dict, comp_tags_all_file)
-    comp_tags_all_file.close()
+    comp_tags_file_name = "../Data/Output/recommendation/comp_tags_all.pkl"
+    if os.path.exists(comp_tags_file_name):
+        print("exist")
+        pass
+    else:
+        comp_ctags_aggregated = comp_ctag_table.groupby("comp_int_id").agg({"tag_uuid": lambda x: set(x)}).reset_index()
+        comp_nctags_aggregated = comp_nctag_table.groupby("comp_int_id").agg({"tag_uuid": lambda x: set(x)}).reset_index()
+        comp_ctags_aggregated.tag_uuid = comp_ctags_aggregated.tag_uuid.apply(lambda x: {"ctags": x})
+        comp_nctags_aggregated.tag_uuid = comp_nctags_aggregated.tag_uuid.apply(lambda x: {"nctags": x})
+        comp_tags_all = comp_ctags_aggregated.merge(comp_nctags_aggregated, how="outer", left_on="comp_int_id", right_on="comp_int_id")
+        comp_tags_all.fillna(0, inplace=True)
+        comp_tags_all.tag_uuid_x = comp_tags_all.tag_uuid_x.apply(lambda x: {} if x == 0 else x)
+        comp_tags_all.tag_uuid_y = comp_tags_all.tag_uuid_y.apply(lambda x: {} if x == 0 else x)
+        comp_tags_all["tag_infos"] = comp_tags_all[["tag_uuid_x", "tag_uuid_y"]].apply(lambda x: {**(x[0]), **(x[1])}, axis=1)
+        comp_tags_all = comp_tags_all.merge(comp_id_dict, how="left", left_on="comp_int_id", right_on="comp_int_id")
+        comp_tags_all.drop(["tag_uuid_x", "tag_uuid_y", "comp_int_id"], axis=1, inplace=True)
+        comp_tags_all_dict = dict(zip(comp_tags_all.comp_id, comp_tags_all.tag_infos))
+        comp_tags_all_file = open("../Data/Output/recommendation/comp_tags_all.pkl", "wb")
+        pickle.dump(comp_tags_all_dict, comp_tags_all_file)
+        comp_tags_all_file.close()
     return (ctag_comps_aggregated, nctag_comps_aggregated, comp_total_num)
 

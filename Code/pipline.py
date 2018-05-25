@@ -14,7 +14,7 @@ old_file = "../Data/Input/Tag_graph/company_tag_data_non_concept"
 comp_ctag_table_all_infos, comp_ctag_table, comp_nctag_table = data_generater.comp_tag(new_file, old_file)
 
 #%%
-a, b, c, d, e = data_generater.data_aggregater(comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos)
+a, b, c = data_generater.data_aggregater(comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos)
 
 #%%
 b
