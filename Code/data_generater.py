@@ -6,11 +6,6 @@ import uuid
 import pickle
 import os
 
-nctag_filter_num = 50
-
-def final_count(l1, l2):
-    return len(l1.intersection(l2))/len(l1.union(l2))
-
 def comp_tag(new_file, old_file):
     '''
     根据输入的公司概念和非概念标记源数据，分别得到完整的公司-概念标签、公司-非概念标签
@@ -53,7 +48,7 @@ def comp_tag(new_file, old_file):
     return (comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos)
 
 
-def data_aggregater(comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos):
+def data_aggregater(comp_ctag_table, comp_nctag_table, nctag_filter_num=50):
     comp_tag_table_all = pd.concat([comp_ctag_table, comp_nctag_table])
     # 为每一个公司赋予一个整数ID，以减小之后的计算量
     comp_id_dict = comp_tag_table_all["comp_id"].drop_duplicates().reset_index(drop=True)
@@ -94,7 +89,6 @@ def data_aggregater(comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos
     # 属性字段可以拓展，作为过滤条件或计算关系型过滤条件的依据。
     comp_tags_file_name = "../Data/Output/recommendation/comp_tags_all.pkl"
     if os.path.exists(comp_tags_file_name):
-        print("exist")
         pass
     else:
         comp_ctags_aggregated = comp_ctag_table.groupby("comp_int_id").agg({"tag_uuid": lambda x: set(x)}).reset_index()
