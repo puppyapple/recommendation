@@ -48,7 +48,7 @@ def comp_tag(new_file, old_file):
     return (comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos)
 
 
-def data_aggregater(comp_ctag_table, comp_nctag_table, nctag_filter_num=50):
+def data_aggregater(comp_ctag_table, comp_nctag_table, nctag_filter_num=50, recalculate=False):
     comp_tag_table_all = pd.concat([comp_ctag_table, comp_nctag_table])
     # 为每一个公司赋予一个整数ID，以减小之后的计算量
     comp_id_dict = comp_tag_table_all["comp_id"].drop_duplicates().reset_index(drop=True)
@@ -88,7 +88,7 @@ def data_aggregater(comp_ctag_table, comp_nctag_table, nctag_filter_num=50):
     # 将公司信息整合成comp_id: property1, property2, ... 的形式，其中概念和非概念标签列表、顶级标签列表，作为初始特征，
     # 属性字段可以拓展，作为过滤条件或计算关系型过滤条件的依据。
     comp_tags_file_name = "../Data/Output/recommendation/comp_tags_all.pkl"
-    if os.path.exists(comp_tags_file_name):
+    if os.path.exists(comp_tags_file_name) and not recalculate:
         pass
     else:
         comp_ctags_aggregated = comp_ctag_table.groupby("comp_int_id").agg({"tag_uuid": lambda x: set(x)}).reset_index()
@@ -103,8 +103,33 @@ def data_aggregater(comp_ctag_table, comp_nctag_table, nctag_filter_num=50):
         comp_tags_all = comp_tags_all.merge(comp_id_dict, how="left", left_on="comp_int_id", right_on="comp_int_id")
         comp_tags_all.drop(["tag_uuid_x", "tag_uuid_y", "comp_int_id"], axis=1, inplace=True)
         comp_tags_all_dict = dict(zip(comp_tags_all.comp_id, comp_tags_all.tag_infos))
-        comp_tags_all_file = open("../Data/Output/recommendation/comp_tags_all.pkl", "wb")
+        comp_tags_all_file = open(comp_tags_file_name, "wb")
         pickle.dump(comp_tags_all_dict, comp_tags_all_file)
         comp_tags_all_file.close()
+    
+    # 储存概念标签的位置关系作为筛选属性
+    ctag_position_file_name = "../Data/Output/recommendation/ctag_position.pkl"
+    label_chains_raw = pd.read_csv("../Data/Input/Tag_graph/label_code_relation", sep='\t', dtype={"label_root_id":str, "label_note_id":str}) \
+    .rename(index=str, columns={"label_note_name":"label_node_name", "label_type_note":"label_type_node"})
+    tag_code_dict = pd.DataFrame.from_dict(pickle.load(open("../Data/Output/recommendation/tag_dict.pkl", "rb")), orient="index").reset_index()
+    tag_code_dict.columns = ["label_name", "tag_code"]
+    tag_code_root = tag_code_dict.rename(index=str, columns={"tag_code":"root_code", "label_name":"root_name"}, inplace=False)
+    tag_code_node = tag_code_dict.rename(index=str, columns={"tag_code":"node_code", "label_name":"node_name"}, inplace=False)
+    label_chains_link = label_chains_raw.merge(tag_code_node, how='left', left_on='label_node_name', right_on='node_name') \
+        .merge(tag_code_root, how='left', left_on='label_root_name', right_on='root_name')
+    label_chains_link["distance"] = label_chains_link.label_type_node - label_chains_link.label_type_root
+    label_chains_link = label_chains_link[["node_code", "root_code", "distance"]].copy()
+    label_chains_link_reverse = label_chains_link[["root_code", "node_code", "distance"]].copy()
+    label_chains_link_reverse.columns = ["node_code", "root_code", "distance"]
+    label_chains_all = pd.concat([label_chains_link, label_chains_link_reverse])
+    label_self = label_chains_all.node_code.drop_duplicates().reset_index().rename(index=str, columns={"index": "distance"}, inplace=False)
+    label_self.distance = 0
+    label_self["root_code"] = label_self["node_code"]
+    label_chains_all = pd.concat([label_chains_all, label_self]).dropna(how="any")
+    label_chains_all["label_link"] = label_chains_all.node_code + "-" + label_chains_all.root_code
+    ctag_position_dict = dict(zip(label_chains_all.label_link, label_chains_all.distance))
+    ctag_position_file = open(ctag_position_file_name, "wb")
+    pickle.dump(ctag_position_dict, ctag_position_file)
+    # print(label_chains_all.head(10))
     return (ctag_comps_aggregated, nctag_comps_aggregated, comp_total_num)
 
