@@ -114,6 +114,5 @@ def result_merge(ctag_ctag_path, ctag_nctag_path, nctag_nctag_path, merged_path)
     tag_relation_all_file_name = "../Data/Output/recommendation/tag_relation_all.pkl"
     tag_relation_all_file = open(tag_relation_all_file_name, "wb")
     pickle.dump(result_all, tag_relation_all_file)
-    tag_relation_all_file_.close()
-    
-    return resu
+    tag_relation_all_file.close()
+    return result_all
