@@ -46,7 +46,13 @@ def ctag_relation(ctag_comps_aggregated):
     ctag_ctag.link_value = ctag_ctag.link_value.apply(lambda x: np.log2(min(0.000001 + x, 1)))
     ctag_ctag.link_value = simple_minmax(ctag_ctag.link_value)
     ctag_ctag = ctag_ctag[["tag_uuid_x", "tag_uuid_y", "link_value"]].drop_duplicates().copy()
-    ctag_ctag.to_csv("../Data/Output/recommendation/ctag_ctag_result.csv", index=False, header=False)
+    ctag_ctag["tag_link"] = ctag_ctag.tag_uuid_x + "-" + ctag_ctag.tag_uuid_y
+    ctag_ctag_dict = dict(zip(ctag_ctag.tag_link, ctag_ctag.link_value))
+    ctag_ctag_file_name = "../Data/Output/recommendation/ctag_ctag.pkl"
+    ctag_ctag_file = open(ctag_ctag_file_name, "wb")
+    pickle.dump(ctag_ctag_dict, ctag_ctag_file)
+    ctag_ctag_file.close()
+    # ctag_ctag.to_csv("../Data/Output/recommendation/ctag_ctag_result.csv", index=False, header=False)
     return ctag_ctag
 
 # 概念标签和非概念标签关系计算
@@ -60,7 +66,13 @@ def ctag_nctag_relation(ctag_comps_aggregated, nctag_comps_aggregated, nctag_idf
     ctag_nctag.link_value = ctag_nctag.link_value.apply(lambda x: np.log2(min(0.000001 + x, 1)))
     ctag_nctag.link_value = simple_minmax(ctag_nctag.link_value)
     ctag_nctag = ctag_nctag[["tag_uuid_x", "tag_uuid_y", "link_value"]].drop_duplicates().copy()
-    ctag_nctag.to_csv("../Data/Output/recommendation/ctag_nctag_result.csv", index=False, header=False)
+    ctag_nctag["tag_link"] = ctag_nctag.tag_uuid_x + "-" + ctag_nctag.tag_uuid_y
+    ctag_nctag_dict = dict(zip(ctag_nctag.tag_link, ctag_nctag.link_value))
+    ctag_nctag_file_name = "../Data/Output/recommendation/ctag_nctag.pkl"
+    ctag_nctag_file = open(ctag_nctag_file_name, "wb")
+    pickle.dump(ctag_nctag_dict, ctag_nctag_file)
+    ctag_nctag_file.close()
+    # ctag_nctag.to_csv("../Data/Output/recommendation/ctag_nctag_result.csv", index=False, header=False)
     return ctag_nctag
 
 # 非概念标签两两关系计算
@@ -87,8 +99,14 @@ def nctag_nctag(nctag_comps_aggregated, nctag_idf):
     nctag_nctag.columns = ["tag1", "tag2", "link_value"]
     nctag_nctag.link_value = nctag_nctag.link_value.apply(lambda x: np.log2(min(0.000001 + x, 1)))
     nctag_nctag.link_value = simple_minmax(nctag_nctag.link_value)
-    nctag_nctag = nctag_nctag[["tag_uuid_x", "tag_uuid_y", "link_value"]].drop_duplicates().copy()
-    nctag_nctag.to_csv("../Data/Output/recommendation/nctag_nctag_result.csv", index=False, header=False)
+    nctag_nctag = nctag_nctag[["tag1", "tag2", "link_value"]].drop_duplicates().copy()
+    nctag_nctag["tag_link"] = nctag_nctag.tag1 + "-" + nctag_nctag.tag2
+    nctag_nctag_dict = dict(zip(nctag_nctag.tag_link, nctag_nctag.link_value))
+    nctag_nctag_file_name = "../Data/Output/recommendation/nctag_nctag.pkl"
+    nctag_nctag_file = open(nctag_nctag_file_name, "wb")
+    pickle.dump(nctag_nctag_dict, nctag_nctag_file)
+    nctag_nctag_file.close()
+    # nctag_nctag.to_csv("../Data/Output/recommendation/nctag_nctag_result.csv", index=False, header=False)
     return nctag_nctag
 
 # 合并三种标签关系的结果并乘以权重后以tag_link—link_value的形式储存起来
@@ -113,6 +131,6 @@ def result_merge(ctag_ctag_path, ctag_nctag_path, nctag_nctag_path, merged_path)
     result_all_dict = dict(zip(result_all.tag_link, result_all.link_value))
     tag_relation_all_file_name = "../Data/Output/recommendation/tag_relation_all.pkl"
     tag_relation_all_file = open(tag_relation_all_file_name, "wb")
-    pickle.dump(result_all, tag_relation_all_file)
+    pickle.dump(result_all_dict, tag_relation_all_file)
     tag_relation_all_file.close()
     return result_all

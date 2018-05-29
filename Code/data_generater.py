@@ -130,6 +130,6 @@ def data_aggregater(comp_ctag_table, comp_nctag_table, nctag_filter_num=50, reca
     ctag_position_dict = dict(zip(label_chains_all.label_link, label_chains_all.distance))
     ctag_position_file = open(ctag_position_file_name, "wb")
     pickle.dump(ctag_position_dict, ctag_position_file)
-    # print(label_chains_all.head(10))
+    ctag_position_file.close()
     return (ctag_comps_aggregated, nctag_comps_aggregated, comp_total_num)
 
