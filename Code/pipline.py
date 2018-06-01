@@ -11,13 +11,13 @@ from sklearn.preprocessing import MinMaxScaler
 
 comp_infos = ctag_ctag = ctag_nctag = nctag_nctag = ctag_position = comp_id_name_dict = 0
 
-comp_tags_all = "../Data/Output/recommendation/comp_tags_all.pkl"
-ctag_ctag = "../Data/Output/recommendation/ctag_ctag.pkl"
-ctag_nctag = "../Data/Output/recommendation/ctag_nctag.pkl"
-nctag_nctag = "../Data/Output/recommendation/nctag_nctag.pkl"
-concept_tree_property = "../Data/Output/recommendation/concept_tree_property.pkl"
-ctag_position = "../Data/Output/recommendation/ctag_position.pkl"
-comp_id_name_dict = "../Data/Output/recommendation/comp_id_name_dict.pkl"
+path_comp_tags_all = "../Data/Output/recommendation/comp_tags_all.pkl"
+path_ctag_ctag = "../Data/Output/recommendation/ctag_ctag.pkl"
+path_ctag_nctag = "../Data/Output/recommendation/ctag_nctag.pkl"
+path_nctag_nctag = "../Data/Output/recommendation/nctag_nctag.pkl"
+path_concept_tree_property = "../Data/Output/recommendation/concept_tree_property.pkl"
+path_ctag_position = "../Data/Output/recommendation/ctag_position.pkl"
+path_comp_id_name_dict = "../Data/Output/recommendation/comp_id_name_dict.pkl"
 
 def all_inputs_generator(new_file, old_file):
     comp_ctag_table, comp_nctag_table, comp_ctag_table_all_infos = data_generator.comp_tag(new_file, old_file)
@@ -37,15 +37,14 @@ def all_inputs_generator(new_file, old_file):
     return 0
 
 
-def data_loader(comp_tags_all=comp_tags_all, ctag_ctag=ctag_ctag, ctag_nctag=ctag_nctag, nctag_nctag=nctag_nctag, 
-                concept_tree_property=concept_tree_property, ctag_position=ctag_position, comp_id_name_dict=comp_id_name_dict):
-    comp_tags_all = pickle.load(open(comp_tags_all, "rb"))
-    ctag_ctag = pickle.load(open(ctag_ctag, "rb"))
-    ctag_nctag = pickle.load(open(ctag_nctag, "rb"))
-    nctag_nctag = pickle.load(open(nctag_nctag, "rb"))
-    concept_tree_property = pickle.load(open(concept_tree_property, "rb"))
-    ctag_position = pickle.load(open(ctag_position, "rb"))
-    comp_id_name_dict = pickle.load(open(comp_id_name_dict, "rb"))
+def data_loader():
+    comp_tags_all = pickle.load(open(path_comp_tags_all, "rb"))
+    ctag_ctag = pickle.load(open(path_ctag_ctag, "rb"))
+    ctag_nctag = pickle.load(open(path_ctag_nctag, "rb"))
+    nctag_nctag = pickle.load(open(path_nctag_nctag, "rb"))
+    concept_tree_property = pickle.load(open(path_concept_tree_property, "rb"))
+    ctag_position = pickle.load(open(path_ctag_position, "rb"))
+    comp_id_name_dict = pickle.load(open(path_comp_id_name_dict, "rb"))
     
     comp_tags_all_df = pd.DataFrame(list(comp_tags_all.items()))
     # comp_tags_all_df.columns = ["comp_id", "tags_infos_dict"]   
@@ -64,11 +63,11 @@ def cal_tag_cartesian(tag_set1, tag_set2, value_dict):
         # print(value_sum)
         return value_sum
     
-def cal_tags_link(comp_info1, comp_info2, ctag_ctag, ctag_nctag, nctag_nctag):
-    ctags1 = comp_info1.get("ctags", {})
-    ctags2 = comp_info2.get("ctags", {})
-    nctags1 = comp_info1.get("nctags", {})
-    nctags2 = comp_info2.get("nctags", {})
+def cal_tags_link(comp_info1, comp_info2):
+    ctags1 = comp_info1.get("ctags", set())
+    ctags2 = comp_info2.get("ctags", set())
+    nctags1 = comp_info1.get("nctags", set())
+    nctags2 = comp_info2.get("nctags", set())
     num_ctags1 = len(ctags1)
     num_ctags2 = len(ctags2)
     num_nctags1 = len(nctags1)
@@ -84,34 +83,31 @@ def cal_tags_link(comp_info1, comp_info2, ctag_ctag, ctag_nctag, nctag_nctag):
     v2 = cal_tag_cartesian(ctags1, nctags2, ctag_nctag) + cal_tag_cartesian(ctags2, nctags1, ctag_nctag)
     v3 = coef3 * cal_tag_cartesian(nctags1, nctags2, nctag_nctag)
     return (v1, v2, v3)
-    
-def cal_part(target_comp_info, comp_infos, ctag_ctag, ctag_nctag, nctag_nctag, weights=(0.6, 0.2, 0.2)):
-    # print("start")
-    # target_comp_info = list(comp_infos[comp_infos.comp_id == comp_id].comp_property_dict)[0]
-    three_values = np.array(list(comp_infos.comp_property_dict.apply(lambda x: cal_tags_link(target_comp_info, x, ctag_ctag, ctag_nctag, nctag_nctag))))
-    scaler = MinMaxScaler(feature_range=(0, 100))
-    scaler.fit(three_values)
-    tmp = comp_infos.copy()
-    tmp["sim_value"] = (scaler.transform(three_values) *  weights).sum(axis=1)
-    return tmp
 
-def cal_simple(target_comp_info, part):
-    return cal_part(target_comp_info, part, ctag_ctag, ctag_nctag, nctag_nctag)
-
-def cal_company_dis(target_comp_info, part,  weights=(0.6, 0.2, 0.2)):
+def cal_company_dis(target_comp_info, part,  weights):
     # print("start")
-    three_value_list = list(part.comp_property_dict.apply(lambda x: cal_tags_link(target_comp_info, x, ctag_ctag, ctag_nctag, nctag_nctag)))
+    three_value_list = list(part.comp_property_dict.apply(lambda x: cal_tags_link(target_comp_info, x)))
     part["three_values"] = three_value_list
     # print("end")
     return part
 
+def concept_tree_relation(comp_info1, comp_info2):
+    top_tag1 = comp_info1.get("top_ctag", set())
+    top_tag2 = comp_info2.get("top_ctag", set())
+    bottom_tag1 = comp_info1.get("bottom_ctag", set())
+    bottom_tag2 = comp_info2.get("bottom_ctag", set())
+    is_same_tree = len(top_tag1.intersection(top_tag2)) > 0
+    bottom_tag_relation = np.array([ctag_position.get(t[0] + "-" + t[1], -1) for t in list(product(bottom_tag1, bottom_tag2))])
+    is_same_link = sum(bottom_tag_relation >= 0) > 0
+    return (is_same_tree, is_same_link)
+    
 def multi_process_rank(comp_id, weights=(0.6, 0.2, 0.2), response_num=100, process_num=8):
     target_comp_info = list(comp_infos[comp_infos.comp_id == comp_id].comp_property_dict)[0]
     result_list = []
     split_comp_infos = np.array_split(comp_infos, process_num)
     pool = mp.Pool()
     for i in range(0, process_num):
-        result_list.append(pool.apply_async(cal_company_dis, (target_comp_info, split_comp_infos[i], )))
+        result_list.append(pool.apply_async(cal_company_dis, (target_comp_info, split_comp_infos[i], weights, )))
     pool.close()
     pool.join()
     result_merged = pd.concat([r.get() for r in result_list])
@@ -119,6 +115,9 @@ def multi_process_rank(comp_id, weights=(0.6, 0.2, 0.2), response_num=100, proce
     to_transform = np.array(list(result_merged.three_values))
     scaler.fit(to_transform)
     result_merged["sim_value"] = (scaler.transform(to_transform) *  weights).sum(axis=1)
-    result_sorted = result_merged.sort_values(by="sim_value", ascending=False)[:response_num].copy()
+    result_merged.reset_index(drop=True, inplace=True)
+    tree_relation = pd.DataFrame(list(result_merged.comp_property_dict.apply(lambda x: concept_tree_relation(target_comp_info, x))), columns=["is_same_tree", "is_same_link"])
+    result_sorted = pd.concat([result_merged, tree_relation], axis=1)
+    result_sorted = result_sorted.sort_values(by="sim_value", ascending=False)[:response_num].copy()
     return result_sorted
     
