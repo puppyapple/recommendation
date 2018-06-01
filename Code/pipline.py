@@ -86,7 +86,7 @@ def cal_tags_link(comp_info1, comp_info2, ctag_ctag, ctag_nctag, nctag_nctag):
     return (v1, v2, v3)
     
 def cal_part(target_comp_info, comp_infos, ctag_ctag, ctag_nctag, nctag_nctag, weights=(0.6, 0.2, 0.2)):
-    print("start")
+    # print("start")
     # target_comp_info = list(comp_infos[comp_infos.comp_id == comp_id].comp_property_dict)[0]
     three_values = np.array(list(comp_infos.comp_property_dict.apply(lambda x: cal_tags_link(target_comp_info, x, ctag_ctag, ctag_nctag, nctag_nctag))))
     scaler = MinMaxScaler(feature_range=(0, 100))
@@ -99,9 +99,10 @@ def cal_simple(target_comp_info, part):
     return cal_part(target_comp_info, part, ctag_ctag, ctag_nctag, nctag_nctag)
 
 def cal_company_dis(target_comp_info, part,  weights=(0.6, 0.2, 0.2)):
-    print("start")
-    three_value_list = list(comp_infos.comp_property_dict.apply(lambda x: cal_tags_link(target_comp_info, x, ctag_ctag, ctag_nctag, nctag_nctag)))
+    # print("start")
+    three_value_list = list(part.comp_property_dict.apply(lambda x: cal_tags_link(target_comp_info, x, ctag_ctag, ctag_nctag, nctag_nctag)))
     part["three_values"] = three_value_list
+    # print("end")
     return part
 
 def multi_process_rank(comp_id, weights=(0.6, 0.2, 0.2), response_num=100, process_num=8):
@@ -115,8 +116,9 @@ def multi_process_rank(comp_id, weights=(0.6, 0.2, 0.2), response_num=100, proce
     pool.join()
     result_merged = pd.concat([r.get() for r in result_list])
     scaler = MinMaxScaler(feature_range=(0, 100))
-    scaler.fit(result_merged.three_values)
-    result_merged["sim_value"] = (scaler.transform(three_values) *  weights).sum(axis=1)
+    to_transform = np.array(list(result_merged.three_values))
+    scaler.fit(to_transform)
+    result_merged["sim_value"] = (scaler.transform(to_transform) *  weights).sum(axis=1)
     result_sorted = result_merged.sort_values(by="sim_value", ascending=False)[:response_num].copy()
     return result_sorted
     
