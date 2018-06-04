@@ -1,6 +1,7 @@
 import pickle
 import pandas as pd
 import numpy as np
+
 import multiprocessing as mp
 from functools import reduce
 from itertools import product
@@ -101,7 +102,16 @@ def concept_tree_relation(comp_info1, comp_info2):
     is_same_link = sum(bottom_tag_relation >= 0) > 0
     return (is_same_tree, is_same_link)
     
-def multi_process_rank(comp_id, weights=(0.6, 0.2, 0.2), response_num=100, process_num=8):
+def branch_stock_relation(comp_id, graph):
+    stock_rel_statement = "match p=(c:company{id:'%s'})-[:ABSOLUTE_HOLDING|:UNKNOWN|:WHOLLY_OWNED|:JOINT_STOCK|:RELATIVE_HOLDING*1..2]-(c2:company) \
+        return c2.id as comp_id,TRUE as has_stock_relation" % (comp_id)
+    stock_rel_comps = pd.DataFrame(graph.run(stock_rel_statement).data(), columns=["comp_id", "has_stock_relation"])
+    
+    branch_rel_statement = "match p=(c:company{id:'%s'})-[:BRANCH*]-(c2:company) return c2.id as comp_id,TRUE as has_branch_relation" % (comp_id)
+    branch_rel_comps = pd.DataFrame(graph.run(branch_rel_statement).data(), columns=["comp_id", "has_branch_relation"])
+    return (stock_rel_comps, branch_rel_comps)
+    
+def multi_process_rank(comp_id, graph, weights=(0.6, 0.2, 0.2), response_num=100, process_num=8):
     target_comp_info = list(comp_infos[comp_infos.comp_id == comp_id].comp_property_dict)[0]
     result_list = []
     split_comp_infos = np.array_split(comp_infos, process_num)
@@ -111,13 +121,20 @@ def multi_process_rank(comp_id, weights=(0.6, 0.2, 0.2), response_num=100, proce
     pool.close()
     pool.join()
     result_merged = pd.concat([r.get() for r in result_list])
+    result_merged.drop_duplicates(subset=["comp_id"], inplace=True)
     scaler = MinMaxScaler(feature_range=(0, 100))
     to_transform = np.array(list(result_merged.three_values))
     scaler.fit(to_transform)
     result_merged["sim_value"] = (scaler.transform(to_transform) *  weights).sum(axis=1)
+    result_merged = result_merged[result_merged.comp_id != comp_id]
     result_merged.reset_index(drop=True, inplace=True)
     tree_relation = pd.DataFrame(list(result_merged.comp_property_dict.apply(lambda x: concept_tree_relation(target_comp_info, x))), columns=["is_same_tree", "is_same_link"])
-    result_sorted = pd.concat([result_merged, tree_relation], axis=1)
-    result_sorted = result_sorted.sort_values(by="sim_value", ascending=False)[:response_num].copy()
+    result_merged = pd.concat([result_merged, tree_relation], axis=1)
+    
+    stock_rel_comps, branch_rel_comps = branch_stock_relation(comp_id, graph)
+    result_merged = result_merged.merge(stock_rel_comps, how="left", left_on="comp_id", right_on="comp_id") \
+        .merge(branch_rel_comps, how="left", left_on="comp_id", right_on="comp_id").fillna(False)
+        
+    result_sorted = result_merged.sort_values(by="sim_value", ascending=False)[:response_num].copy()
     return result_sorted
     
