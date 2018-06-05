@@ -82,7 +82,7 @@ def cal_tags_link(comp_info1, comp_info2):
     
     v1 = coef1 * cal_tag_cartesian(ctags1, ctags2, ctag_ctag)
     v2 = cal_tag_cartesian(ctags1, nctags2, ctag_nctag) + cal_tag_cartesian(ctags2, nctags1, ctag_nctag)
-    v3 = coef3 * cal_tag_cartesian(nctags1, nctags2, nctag_nctag)
+    v3 = coef2 * coef3 * cal_tag_cartesian(nctags1, nctags2, nctag_nctag)
     return (v1, v2, v3)
 
 def cal_company_dis(target_comp_info, part,  weights):
@@ -106,8 +106,7 @@ def branch_stock_relation(comp_id, graph):
     stock_rel_statement = "match p=(c:company{id:'%s'})-[:ABSOLUTE_HOLDING|:UNKNOWN|:WHOLLY_OWNED|:JOINT_STOCK|:RELATIVE_HOLDING*1..2]-(c2:company) \
         return c2.id as comp_id,TRUE as has_stock_relation" % (comp_id)
     stock_rel_comps = pd.DataFrame(graph.run(stock_rel_statement).data(), columns=["comp_id", "has_stock_relation"])
-    
-    branch_rel_statement = "match p=(c:company{id:'%s'})-[:BRANCH*]-(c2:company) return c2.id as comp_id,TRUE as has_branch_relation" % (comp_id)
+    branch_rel_statement = "match p=(c:company{id:'%s'})-[:BRANCH*1..2]-(c2:company) return c2.id as comp_id,TRUE as has_branch_relation" % (comp_id)
     branch_rel_comps = pd.DataFrame(graph.run(branch_rel_statement).data(), columns=["comp_id", "has_branch_relation"])
     return (stock_rel_comps, branch_rel_comps)
     
