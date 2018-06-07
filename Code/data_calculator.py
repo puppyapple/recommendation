@@ -8,7 +8,10 @@ from sklearn import preprocessing
 from sklearn.preprocessing import MinMaxScaler
 
 def final_count(l1, l2):
-    return len(l1.intersection(l2))/len(l1.union(l2))
+    if len(l1.union(l2)) == 0:
+        return 0
+    else:
+        return len(l1.intersection(l2))/len(l1.union(l2))
 
 def simple_minmax(column_target, min_v=0.001, max_v=1):
     target = column_target.values.reshape(-1, 1)
@@ -31,17 +34,17 @@ def ctag_relation(ctag_comps_aggregated):
     ctag_ctag = ctag_comps_aggregated.merge(ctag_comps_aggregated, on="key")
     ctag_ctag["link_value"] = ctag_ctag[["comp_int_id_x", "comp_int_id_y"]].apply(lambda x: final_count(x[0], x[1]), axis=1)
     ctag_ctag = ctag_ctag[ctag_ctag.link_value != 0].copy()
-
+    
     # 过滤同链标签（保留相邻标签节点）
-    ctag_position = pickle.load(open("../Data/Output/recommendation/ctag_position.pkl", "rb"))
-    label_chains_all = pd.DataFrame.from_dict(ctag_position, orient="index").reset_index()
-    label_chains_all.columns = ["node_link", "distance"]
-    label_chains_all = label_chains_all[label_chains_all.distance > 1]
-    # 将相邻节点外的标签对统一标记为1，join后进行剔除
-    label_chains_all.distance = 1
-    ctag_ctag["node_link"] = ctag_ctag[["tag_uuid_x", "tag_uuid_y"]].apply(lambda x: x[0] + "-" + x[1], axis=1)
-    ctag_ctag = ctag_ctag.merge(label_chains_all, how="left", left_on="node_link", right_on="node_link")
-    ctag_ctag = ctag_ctag[ctag_ctag.distance != 1].drop(["node_link", "distance"], axis=1)
+    # ctag_position = pickle.load(open("../Data/Output/recommendation/ctag_position.pkl", "rb"))
+    # label_chains_all = pd.DataFrame.from_dict(ctag_position, orient="index").reset_index()
+    # label_chains_all.columns = ["node_link", "distance"]
+    # label_chains_all = label_chains_all[label_chains_all.distance > 1]
+    # # 将相邻节点外的标签对统一标记为1，join后进行剔除
+    # label_chains_all.distance = 1
+    # ctag_ctag["node_link"] = ctag_ctag[["tag_uuid_x", "tag_uuid_y"]].apply(lambda x: x[0] + "-" + x[1], axis=1)
+    # ctag_ctag = ctag_ctag.merge(label_chains_all, how="left", left_on="node_link", right_on="node_link")
+    # ctag_ctag = ctag_ctag[ctag_ctag.distance != 1].drop(["node_link", "distance"], axis=1)
     
     ctag_ctag.link_value = ctag_ctag.link_value.apply(lambda x: np.log2(min(0.000001 + x, 1)))
     ctag_ctag.link_value = simple_minmax(ctag_ctag.link_value)
@@ -109,7 +112,7 @@ def nctag_nctag(nctag_comps_aggregated, nctag_idf):
     # nctag_nctag.to_csv("../Data/Output/recommendation/nctag_nctag_result.csv", index=False, header=False)
     return nctag_nctag
 
-# 合并三种标签关系的结果并乘以权重后以tag_link—link_value的形式储存起来
+# 合并三种标签关系的结果以tag_link—link_value的形式储存起来
 def result_merge(ctag_ctag_path, ctag_nctag_path, nctag_nctag_path, merged_path):
     ctag_ctag = pd.read_csv(ctag_ctag_path, header=None)
     # ctag_ctag.columns = ["tag1", "tag2", "link_value"]
