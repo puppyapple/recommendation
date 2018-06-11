@@ -86,6 +86,7 @@ def nctag_nctag(nctag_comps_aggregated, nctag_idf):
     record_len = len(nctag_nctag)
     interval_size = record_len // 10
     i = 0
+    # 由于非概念标签之间的计算量级较大，服务器内存不足，因此采用分块计算、最后融合的方式
     while interval_size*i < record_len:
         start_time = datetime.datetime.now()
         print("### start part %d at %s ###" % (i, start_time.strftime('%H:%M:%S')))

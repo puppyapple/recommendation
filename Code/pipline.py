@@ -115,7 +115,9 @@ def branch_stock_relation(comp_id, graph):
     branch_rel_comps = pd.DataFrame(graph.run(branch_rel_statement).data(), columns=["comp_id", "has_branch_relation"])
     return (stock_rel_comps, branch_rel_comps)
     
-def multi_process_rank(comp_id, graph, weights=(0.5, 0.4, 0.1), response_num=None, tag_link_filters=(0.0, 0.3, 0.3), process_num=8):
+def multi_process_rank(comp_name, graph, weights=(0.5, 0.4, 0.1), response_num=None, tag_link_filters=(0.0, 0.3, 0.3), process_num=8):
+    comp_id_name_dict_reverse = dict(zip(comp_id_name_dict.values(), comp_id_name_dict.keys()))
+    comp_id = comp_id_name_dict_reverse.get(comp_name)
     target_comp_info = list(comp_infos[comp_infos.comp_id == comp_id].comp_property_dict)[0]
     # 如果目标公司具备概念标签，则概念-非概念关系值的权重保留较高，否则提高非概念标签之间值的权重
     if target_comp_info.get("ctags") == None:
@@ -144,7 +146,8 @@ def multi_process_rank(comp_id, graph, weights=(0.5, 0.4, 0.1), response_num=Non
     if response_num == None:
         response_num = len(result_merged)
     result_sorted = result_merged.sort_values(by="sim_value", ascending=False)[:response_num].copy()
-    return result_sorted
+    result_sorted['comp_name'] = result_sorted.comp_id.apply(lambda x: comp_id_name_dict.get(x))
+    return result_sorted[["comp_id", "comp_name", "sim_value", "is_same_tree", "is_same_link", "has_stock_relation", "has_branch_relation"]]
     
 def sample_test(comp_id, graph, each_num=(20, 20), weights=(0.5, 0.4, 0.1), tag_link_filters=(0.0, 0.3, 0.3)):
     result_raw = multi_process_rank(comp_id, graph, weights=weights, tag_link_filters=tag_link_filters)
