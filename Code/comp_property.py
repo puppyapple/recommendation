@@ -20,7 +20,7 @@ def concept_tree_property(comp_ctag_table_all_infos):
     concept_tree_property.drop(["comp_id"], axis=1, inplace=True)
     concept_tree_property_dict = concept_tree_property.to_dict(orient='index')
     concept_tree_property_dict_file_name = "../Data/Output/recommendation/concept_tree_property.pkl"
-    concept_tree_property_dict_file = open("../Data/Output/recommendation/concept_tree_property.pkl", "wb")
+    concept_tree_property_dict_file = open(concept_tree_property_dict_file_name, "wb")
     pickle.dump(concept_tree_property_dict, concept_tree_property_dict_file)
     concept_tree_property_dict_file.close()
     return concept_tree_property
