@@ -9,16 +9,16 @@ from Code import data_generator, data_calculator, comp_property
 from sklearn import preprocessing
 from sklearn.preprocessing import MinMaxScaler
 
-
+version = "v1"
 comp_infos = ctag_ctag = ctag_nctag = nctag_nctag = ctag_position = comp_id_name_dict = 0
 
-path_comp_tags_all = "../Data/Output/recommendation/comp_tags_all.pkl"
-path_ctag_ctag = "../Data/Output/recommendation/ctag_ctag.pkl"
-path_ctag_nctag = "../Data/Output/recommendation/ctag_nctag.pkl"
-path_nctag_nctag = "../Data/Output/recommendation/nctag_nctag.pkl"
-path_concept_tree_property = "../Data/Output/recommendation/concept_tree_property.pkl"
-path_ctag_position = "../Data/Output/recommendation/ctag_position.pkl"
-path_comp_id_name_dict = "../Data/Output/recommendation/comp_id_name_dict.pkl"
+path_comp_tags_all = "../Data/Output/recommendation/%s/comp_tags_all.pkl" % version
+path_ctag_ctag = "../Data/Output/recommendation/%s/ctag_ctag.pkl" % version
+path_ctag_nctag = "../Data/Output/recommendation/%s/ctag_nctag.pkl" % version
+path_nctag_nctag = "../Data/Output/recommendation/%s/nctag_nctag.pkl" % version
+path_concept_tree_property = "../Data/Output/recommendation/%s/concept_tree_property.pkl" % version
+path_ctag_position = "../Data/Output/recommendation/%s/ctag_position.pkl" % version
+path_comp_id_name_dict = "../Data/Output/recommendation/%s/comp_id_name_dict.pkl" % version
 
 new_file = "../Data/Input/Tag_graph/company_tag_data_concept"
 old_file = "../Data/Input/Tag_graph/company_tag_data_non_concept"
@@ -103,7 +103,7 @@ def concept_tree_relation(comp_info1, comp_info2):
     bottom_tag1 = comp_info1.get("bottom_ctag", set())
     bottom_tag2 = comp_info2.get("bottom_ctag", set())
     is_same_tree = len(top_tag1.intersection(top_tag2)) > 0
-    bottom_tag_relation = np.array([ctag_position.get(t[0] + "-" + t[1], -1) for t in list(product(bottom_tag1, bottom_tag2))])
+    bottom_tag_relation = np.array([(str(t[0]) + "-" + str(t[1])) in list(ctag_position.keys()) for t in list(product(bottom_tag1, bottom_tag2))])
     is_same_link = sum(bottom_tag_relation >= 0) > 0
     return (is_same_tree, is_same_link)
     
@@ -147,6 +147,7 @@ def multi_process_rank(comp_name, graph, weights=(0.5, 0.4, 0.1), response_num=N
         response_num = len(result_merged)
     result_sorted = result_merged.sort_values(by="sim_value", ascending=False)[:response_num].copy()
     result_sorted['comp_name'] = result_sorted.comp_id.apply(lambda x: comp_id_name_dict.get(x))
+    result_sorted.reset_index(drop=True, inplace=True)
     return result_sorted[["comp_id", "comp_name", "sim_value", "is_same_tree", "is_same_link", "has_stock_relation", "has_branch_relation"]]
     
 def sample_test(comp_id, graph, each_num=(20, 20), weights=(0.5, 0.4, 0.1), tag_link_filters=(0.0, 0.3, 0.3)):
